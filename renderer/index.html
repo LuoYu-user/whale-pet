@@ -23,7 +23,16 @@
     #stage.dragging { cursor: grabbing; }
     .flip { transform: scaleX(-1); }
 
-    /* 鲸鱼本体区域：窗口内 left:20 top:30 160x130，点击判定与主进程保持一致 */
+    /* 气泡锚点：包住鲸鱼本体区域，气泡挂在它上方，随窗口同层不裁剪 */
+    #bubble-anchor {
+      position: absolute;
+      left: 20px;
+      top: 30px;
+      width: 160px;
+      height: 130px;
+      pointer-events: none;
+      animation: floaty 3s ease-in-out infinite;
+    }
     #pet {
       position: absolute;
       left: 20px;
@@ -74,10 +83,10 @@
     .sleeping .eye-sleep { display: block; }
     .eye-sleep { display: none; }
 
-    /* 气泡：必须在窗口边界内，否则会被裁剪看不见 */
+    /* 气泡：紧贴鲸鱼本体上方，随形象浮动动画同步移动，保持在窗口内 */
     #bubble {
       position: absolute;
-      top: 2px;
+      bottom: calc(100% - 42px);
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.95);
@@ -94,6 +103,11 @@
       box-shadow: 0 2px 10px rgba(77, 107, 254, 0.25);
       word-wrap: break-word;
       z-index: 5;
+      animation: bubbleFloaty 3s ease-in-out infinite;
+    }
+    @keyframes bubbleFloaty {
+      0%, 100% { margin-bottom: 0px; }
+      50% { margin-bottom: -8px; }
     }
     #bubble.show { opacity: 1; }
     #bubble::after {
@@ -206,7 +220,9 @@
 </head>
 <body>
   <div id="stage">
-    <div id="bubble"></div>
+    <div id="bubble-anchor">
+      <div id="bubble"></div>
+    </div>
     <div id="ctxmenu">
       <div class="item" id="cm-chat">💬 和我聊天</div>
       <div class="item" id="cm-roam">🌊 开始游动</div>
