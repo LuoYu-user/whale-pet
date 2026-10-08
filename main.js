@@ -132,15 +132,20 @@ function createChatWindow() {
   });
   chatWin.setAlwaysOnTop(true, 'floating');
   chatWin.loadFile(path.join(__dirname, 'renderer', 'chat.html'));
+  let chatShownAt = 0;
+  chatWin.on('show', () => { chatShownAt = Date.now(); });
   chatWin.on('blur', () => {
-    if (chatWin && !chatWin.webContents.isDevToolsOpened()) chatWin.hide();
+    // 显示后 500ms 内的失焦是窗口切换抖动，忽略，避免“闪现即隐藏”
+    if (!chatWin || chatWin.isDestroyed()) return;
+    if (Date.now() - chatShownAt < 500) return;
+    if (!chatWin.webContents.isDevToolsOpened()) chatWin.hide();
   });
 }
 
 function showChatNearPet() {
   if (!chatWin) createChatWindow();
-  // 已打开则收起（再次点击鲸鱼=切换聊天窗口）
-  if (chatWin.isVisible()) {
+  // 已打开则收起（再次点击鲸鱼=切换聊天窗口）；刚显示的 400ms 内不响应切换，防双击误关
+  if (chatWin.isVisible() && Date.now() - chatShownAt > 400) {
     chatWin.hide();
     return;
   }
@@ -155,6 +160,8 @@ function showChatNearPet() {
   chatWin.setBounds({ x, y, width: 380, height: 520 });
   chatWin.show();
   chatWin.focus();
+  // Windows 可能拒绝后台进程窗口抢焦点，延迟再聚焦一次确保输入框可用
+  setTimeout(() => { if (chatWin && !chatWin.isDestroyed() && chatWin.isVisible()) chatWin.focus(); }, 350);
   chatWin.webContents.send('chat:focus-input');
 }
 
