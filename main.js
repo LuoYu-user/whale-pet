@@ -65,9 +65,9 @@ let chatWin = null;
 let tray = null;
 let isQuitting = false;
 
-const PET_SIZE = { width: 200, height: 200 };
-// 鲸鱼本体在窗口内的区域（与渲染层 PET_BOX 一致）
-const PET_BOX = { x: 20, y: 30, w: 160, h: 130 };
+const PET_SIZE = { width: 200, height: 260 };
+// 鲸鱼本体在窗口内的区域（与渲染层 PET_BOX 一致）；上方留白给气泡
+const PET_BOX = { x: 20, y: 90, w: 160, h: 130 };
 
 function createPetWindow() {
   petWin = new BrowserWindow({
@@ -98,19 +98,19 @@ function createPetWindow() {
   });
   // 透明区域点击穿透：鼠标不在鲸鱼本体区域时，点击事件直接传给桌面
   const area = { ...PET_BOX };
-  petWin.webContents.on('before-input-event', () => {});
+  let lastInPet = null;
   setInterval(() => {
     if (!petWin || petWin.isDestroyed()) return;
-    if (petWin.isFocused()) {
-      petWin.setIgnoreMouseEvents(false);
-      return;
-    }
     const cursor = screen.getCursorScreenPoint();
     const [px, py] = petWin.getPosition();
     const inX = cursor.x >= px + area.x && cursor.x <= px + area.x + area.w;
     const inY = cursor.y >= py + area.y && cursor.y <= py + area.y + area.h;
     const inPet = inX && inY;
     petWin.setIgnoreMouseEvents(!inPet, { forward: true });
+    if (inPet !== lastInPet) {
+      lastInPet = inPet;
+      petWin.webContents.send('pet:mouse-in-pet', { inPet });
+    }
   }, 120).unref();
   if (IS_DEV) petWin.webContents.openDevTools({ mode: 'detach' });
 }
@@ -139,14 +139,19 @@ function createChatWindow() {
 
 function showChatNearPet() {
   if (!chatWin) createChatWindow();
+  // 已打开则收起（再次点击鲸鱼=切换聊天窗口）
+  if (chatWin.isVisible()) {
+    chatWin.hide();
+    return;
+  }
   const pos = petWin ? petWin.getPosition() : [100, 100];
   const [px, py] = pos;
   const display = screen.getDisplayNearestPoint({ x: px, y: py });
   const { width, height } = display.workAreaSize;
-  let x = px - 380 + 100;
-  let y = py + 120;
-  if (x < display.workArea.x) x = display.workArea.x;
-  if (y + 520 > display.workArea.y + height) y = Math.max(display.workArea.y, py - 520 - 20);
+  let x = px + 60;
+  let y = py + 80;
+  if (x + 380 > display.workArea.x + width) x = px - 380 + 60;
+  if (y + 520 > display.workArea.y + height) y = Math.max(display.workArea.y, py - 520 + 100);
   chatWin.setBounds({ x, y, width: 380, height: 520 });
   chatWin.show();
   chatWin.focus();

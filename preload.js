@@ -35,4 +35,7 @@ contextBridge.exposeInMainWorld('petApi', {
   onChatFocus: (cb) => {
     ipcRenderer.on('chat:focus-input', (_e) => cb());
   },
+  onMouseInPet: (cb) => {
+    ipcRenderer.on('pet:mouse-in-pet', (_e, data) => cb(data));
+  },
 });

@@ -27,7 +27,7 @@
     #bubble-anchor {
       position: absolute;
       left: 20px;
-      top: 30px;
+      top: 90px;
       width: 160px;
       height: 130px;
       pointer-events: none;
@@ -36,7 +36,7 @@
     #pet {
       position: absolute;
       left: 20px;
-      top: 30px;
+      top: 90px;
       width: 160px;
       height: 130px;
     }
@@ -86,7 +86,7 @@
     /* 气泡：紧贴鲸鱼本体上方，随形象浮动动画同步移动，保持在窗口内 */
     #bubble {
       position: absolute;
-      bottom: calc(100% - 42px);
+      bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.95);
@@ -178,7 +178,7 @@
     #chat-fab {
       position: absolute;
       bottom: 40px;
-      left: 50%;
+      left: 100px;
       transform: translateX(-50%);
       width: 34px;
       height: 34px;
@@ -195,7 +195,6 @@
       z-index: 4;
     }
     #chat-fab:hover { transform: translateX(-50%) scale(1.12); }
-    #stage:hover #chat-fab { display: flex; }
 
     #ctxmenu {
       position: absolute;
@@ -296,7 +295,7 @@
     baseImg.src = 'pet.png';
 
     // ---------- 交互判定区（与主进程穿透逻辑一致） ----------
-    const PET_BOX = { x: 20, y: 30, w: 160, h: 130 };
+    const PET_BOX = { x: 20, y: 90, w: 160, h: 130 };
     let mouseInPet = false;
     function updateMouseInPet(e) {
       mouseInPet = e.offsetX >= PET_BOX.x && e.offsetX <= PET_BOX.x + PET_BOX.w
@@ -472,9 +471,12 @@
     });
 
     // ---------- 聊天按钮 ----------
-    document.getElementById('chat-fab').addEventListener('click', (e) => {
-      e.stopPropagation();
-      api.openChat();
+    // 注意：透明窗口启用了 setIgnoreMouseEvents(forward) 后，鼠标离开不会触发 :hover 失效，
+    // 按钮一经显示会常驻——改由主进程鼠标轮询驱动显示/隐藏
+    api.onMouseInPet(({ inPet }) => {
+      const fab = document.getElementById('chat-fab');
+      if (inPet) fab.style.display = 'flex';
+      else fab.style.display = 'none';
     });
 
     document.addEventListener('dragstart', (e) => e.preventDefault());
