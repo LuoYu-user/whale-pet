@@ -262,22 +262,33 @@
     const pomoLabel = document.getElementById('pomo-label');
     const feedEl = document.getElementById('feed');
 
-    // ---------- 自定义形象：优先加载 pet.png，失败回退 SVG ----------
+    // ---------- 自定义形象：由主进程提供 file:// 地址，加载失败回退 SVG ----------
     let useImageMode = false;
-    const baseImg = new Image();
-    const moodImgs = {}; // happy/sleeping/sad -> src（存在才用）
-    baseImg.onload = () => {
-      useImageMode = true;
-      petImg.src = baseImg.src;
-      petImg.style.display = 'block';
-      whaleSvg.style.display = 'none';
-      [['happy', 'pet-happy.png'], ['sleeping', 'pet-sleep.png'], ['sad', 'pet-sad.png']].forEach(([mood, file]) => {
+    let basePetSrc = null;
+    const moodImgs = {}; // happy/sleeping/sad -> src
+    (async () => {
+      const c = await api.getConfig();
+      const imgs = c.petImages || {};
+      if (imgs.normal) {
         const im = new Image();
-        im.onload = () => { moodImgs[mood] = im.src; };
-        im.src = file;
-      });
-    };
-    baseImg.src = 'pet.png';
+        im.onload = () => {
+          useImageMode = true;
+          basePetSrc = im.src;
+          petImg.src = im.src;
+          petImg.style.display = 'block';
+          whaleSvg.style.display = 'none';
+          ['happy', 'sleeping', 'sad'].forEach(m => {
+            if (imgs[m]) {
+              const mm = new Image();
+              mm.onload = () => { moodImgs[m] = mm.src; };
+              mm.src = imgs[m];
+            }
+          });
+        };
+        im.src = imgs.normal;
+      }
+      if (c.petName) document.title = c.petName;
+    })();
 
     // ---------- 交互判定区（与主进程穿透逻辑一致） ----------
     const PET_BOX = { x: 20, y: 30, w: 160, h: 130 };
@@ -386,8 +397,8 @@
       if (state === lookState) return;
       lookState = state;
       if (useImageMode) {
-        const src = state !== 'normal' && moodImgs[state] ? moodImgs[state] : baseImg.src;
-        if (petImg.src !== src) petImg.src = src;
+        const src = state !== 'normal' && moodImgs[state] ? moodImgs[state] : basePetSrc;
+        if (src && petImg.src !== src) petImg.src = src;
         return;
       }
       whaleSvg.classList.remove('happy', 'sad', 'sleeping');

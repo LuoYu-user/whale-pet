@@ -455,6 +455,12 @@ function fmt(sec) {
 }
 
 // ---------- IPC ----------
+const { pathToFileURL } = require('url');
+function petImageFileUrl(file) {
+  const p = path.join(__dirname, file);
+  return fs.existsSync(p) ? pathToFileURL(p).href : null;
+}
+
 function setupIpc() {
   ipcMain.handle('config:get', () => ({
     petName: config.petName,
@@ -464,6 +470,13 @@ function setupIpc() {
     pomodoroRest: config.pomodoroRest,
     hasApiKey: !!config.deepseekApiKey,
     model: config.deepseekModel,
+    // 自定义形象：根目录 pet.png 及差分图的 file:// 地址（不存在则为 null）
+    petImages: {
+      normal: petImageFileUrl('pet.png'),
+      happy: petImageFileUrl('pet-happy.png'),
+      sleeping: petImageFileUrl('pet-sleep.png'),
+      sad: petImageFileUrl('pet-sad.png'),
+    },
   }));
   ipcMain.handle('chat:send', async (_e, messages) => {
     if (!Array.isArray(messages) || messages.length === 0) return { ok: false, error: '空消息' };
