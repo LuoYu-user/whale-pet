@@ -166,15 +166,6 @@
       100% { opacity: 0; transform: translateY(20px) scale(0.3); }
     }
 
-    #hint {
-      position: absolute;
-      bottom: 2px;
-      left: 6px;
-      font-size: 10px;
-      color: rgba(255,255,255,0.75);
-      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-      pointer-events: none;
-    }
     #chat-fab {
       position: absolute;
       bottom: 40px;
@@ -262,7 +253,7 @@
     <div id="feed">🐟</div>
     <div id="pomo"><span id="pomo-time">25:00</span><span class="label" id="pomo-label">工作</span></div>
     <button id="chat-fab" title="和鲸鱼娘聊天">💬</button>
-    <div id="hint">拖动 · 双击喂食 · 右键菜单</div>
+
   </div>
 
   <script>
@@ -295,11 +286,13 @@
     baseImg.src = 'pet.png';
 
     // ---------- 交互判定区（与主进程穿透逻辑一致） ----------
+    // 注意：用 clientX/Y 判断，不能用 offsetX/Y——
+    // 当鼠标在 <img> 上时事件目标是图片，offsetX 是相对图片的坐标，会全部误判
     const PET_BOX = { x: 20, y: 90, w: 160, h: 130 };
     let mouseInPet = false;
     function updateMouseInPet(e) {
-      mouseInPet = e.offsetX >= PET_BOX.x && e.offsetX <= PET_BOX.x + PET_BOX.w
-        && e.offsetY >= PET_BOX.y && e.offsetY <= PET_BOX.y + PET_BOX.h;
+      mouseInPet = e.clientX >= PET_BOX.x && e.clientX <= PET_BOX.x + PET_BOX.w
+        && e.clientY >= PET_BOX.y && e.clientY <= PET_BOX.y + PET_BOX.h;
     }
 
     // ---------- 拖拽 ----------
@@ -444,8 +437,8 @@
       e.preventDefault();
       if (!mouseInPet) return;
       document.getElementById('cm-roam').textContent = cfg.roamEnabled ? '🌊 暂停游动' : '🌊 开始游动';
-      ctxMenu.style.left = Math.min(e.offsetX, 60) + 'px';
-      ctxMenu.style.top = Math.min(e.offsetY, 110) + 'px';
+      ctxMenu.style.left = Math.min(e.clientX, 60) + 'px';
+      ctxMenu.style.top = Math.min(e.clientY, 110) + 'px';
       ctxMenu.style.display = 'block';
       clearTimeout(ctxHideTimer);
       ctxHideTimer = setTimeout(hideCtxMenu, 6000);

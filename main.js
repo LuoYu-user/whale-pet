@@ -64,6 +64,7 @@ let petWin = null;
 let chatWin = null;
 let tray = null;
 let isQuitting = false;
+let chatShownAt = 0; // 聊天窗上次显示时间（模块级，showChatNearPet 也要用）
 
 const PET_SIZE = { width: 200, height: 260 };
 // 鲸鱼本体在窗口内的区域（与渲染层 PET_BOX 一致）；上方留白给气泡
@@ -132,7 +133,6 @@ function createChatWindow() {
   });
   chatWin.setAlwaysOnTop(true, 'floating');
   chatWin.loadFile(path.join(__dirname, 'renderer', 'chat.html'));
-  let chatShownAt = 0;
   chatWin.on('show', () => { chatShownAt = Date.now(); });
   chatWin.on('blur', () => {
     // 显示后 500ms 内的失焦是窗口切换抖动，忽略，避免“闪现即隐藏”
