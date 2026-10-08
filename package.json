@@ -1,0 +1,19 @@
+{
+  "name": "whale-pet",
+  "productName": "鲸鱼娘桌宠",
+  "version": "0.1.0",
+  "description": "DeepSeek 风格鲸鱼娘桌面宠物：动画、拖拽、气泡、喂食、番茄钟、心情、托盘、边缘游动、全屏自动隐藏、AI 聊天",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "author": "vibe-code",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
