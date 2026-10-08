@@ -23,13 +23,21 @@
     #stage.dragging { cursor: grabbing; }
     .flip { transform: scaleX(-1); }
 
+    /* 鲸鱼本体区域：窗口内 left:20 top:30 160x130，点击判定与主进程保持一致 */
     #pet {
       position: absolute;
       left: 20px;
       top: 30px;
       width: 160px;
       height: 130px;
-      transition: transform 0.3s ease;
+    }
+    #pet-img {
+      width: 160px;
+      height: 130px;
+      object-fit: contain;
+      display: none;
+      animation: floaty 3s ease-in-out infinite;
+      transform-origin: 80px 65px;
     }
     #float-anim {
       animation: floaty 3s ease-in-out infinite;
@@ -48,7 +56,7 @@
       50% { transform: rotate(-14deg); }
     }
     .swimming #tail { animation-duration: 0.5s; }
-    .swimming #float-anim { animation-duration: 1.2s; }
+    .swimming #float-anim, .swimming #pet-img { animation-duration: 1.2s; }
     #eye-left, #eye-right {
       animation: blink 4s infinite;
       transform-origin: center;
@@ -66,17 +74,18 @@
     .sleeping .eye-sleep { display: block; }
     .eye-sleep { display: none; }
 
+    /* 气泡：必须在窗口边界内，否则会被裁剪看不见 */
     #bubble {
       position: absolute;
-      top: -6px;
+      top: 2px;
       left: 50%;
-      transform: translate(-50%, -100%);
+      transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.95);
       border: 2px solid #4D6BFE;
       border-radius: 12px;
-      padding: 8px 12px;
-      max-width: 170px;
-      font-size: 13px;
+      padding: 6px 10px;
+      max-width: 172px;
+      font-size: 12px;
       line-height: 1.4;
       color: #1a2340;
       opacity: 0;
@@ -84,6 +93,7 @@
       pointer-events: none;
       box-shadow: 0 2px 10px rgba(77, 107, 254, 0.25);
       word-wrap: break-word;
+      z-index: 5;
     }
     #bubble.show { opacity: 1; }
     #bubble::after {
@@ -99,10 +109,11 @@
     #bubble.kind-system { border-color: #ff7b54; }
     #bubble.kind-system::after { border-color: #ff7b54 transparent transparent; }
 
+    /* 番茄钟/聊天按钮：必须落在鲸鱼本体判定区内（20..180, 30..160），否则点击穿透点不到 */
     #pomo {
       position: absolute;
-      bottom: 4px;
-      right: 2px;
+      right: 20px;
+      bottom: 46px;
       background: rgba(255, 255, 255, 0.92);
       border: 2px solid #e74c3c;
       border-radius: 50%;
@@ -117,6 +128,7 @@
       color: #e74c3c;
       cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 4;
     }
     #pomo.rest { border-color: #27ae60; color: #27ae60; }
     #pomo .label { font-size: 9px; font-weight: normal; }
@@ -130,6 +142,7 @@
       opacity: 0;
       left: 80px;
       top: 60px;
+      z-index: 4;
     }
     #feed.eat { animation: eatAnim 0.9s ease forwards; }
     @keyframes eatAnim {
@@ -138,6 +151,7 @@
       70% { opacity: 1; transform: translateY(0) scale(1) rotate(-8deg); }
       100% { opacity: 0; transform: translateY(20px) scale(0.3); }
     }
+
     #hint {
       position: absolute;
       bottom: 2px;
@@ -147,6 +161,28 @@
       text-shadow: 0 1px 2px rgba(0,0,0,0.4);
       pointer-events: none;
     }
+    #chat-fab {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #4D6BFE;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(77, 107, 254, 0.5);
+      z-index: 4;
+    }
+    #chat-fab:hover { transform: translateX(-50%) scale(1.12); }
+    #stage:hover #chat-fab { display: flex; }
+
     #ctxmenu {
       position: absolute;
       display: none;
@@ -166,26 +202,6 @@
       white-space: nowrap;
     }
     #ctxmenu .item:hover { background: rgba(77, 107, 254, 0.4); }
-    #chat-fab {
-      position: absolute;
-      bottom: 6px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: #4D6BFE;
-      color: white;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(77, 107, 254, 0.5);
-    }
-    #chat-fab:hover { transform: translateX(-50%) scale(1.12); }
-    #stage:hover #chat-fab { display: flex; }
   </style>
 </head>
 <body>
@@ -193,7 +209,7 @@
     <div id="bubble"></div>
     <div id="ctxmenu">
       <div class="item" id="cm-chat">💬 和我聊天</div>
-      <div class="item" id="cm-roam">🌊 暂停游动</div>
+      <div class="item" id="cm-roam">🌊 开始游动</div>
       <div class="item" id="cm-quit">🚪 退出桌宠</div>
     </div>
     <div id="pet">
@@ -220,17 +236,18 @@
           <ellipse cx="58" cy="62" rx="5" ry="3.5" fill="#ff9eb5" opacity="0.7" />
           <ellipse cx="112" cy="62" rx="5" ry="3.5" fill="#ff9eb5" opacity="0.7" />
           <path class="mouth-smile" d="M 80 68 Q 86 74 92 68" stroke="#1a2340" stroke-width="2.2" fill="none" stroke-linecap="round" />
-          <path class="mouth-sad" d="M 80 72 Q 86 67 92 72" stroke="#1a2340" stroke-width="2.2" fill="none" stroke-linecap="round" style="display:none" />
+          <path class="mouth-sad" d="M 80 72 Q 86 67 92 72" stroke="#1a2340" stroke-width="2.2" fill="none" stroke-linecap="round" />
           <path d="M 120 44 Q 130 52 122 60" stroke="#3a54d4" stroke-width="2" fill="none" stroke-linecap="round" />
           <ellipse cx="40" cy="84" rx="6" ry="4" fill="#8fb0ff" opacity="0.8" />
           <ellipse cx="126" cy="86" rx="5" ry="3.5" fill="#8fb0ff" opacity="0.8" />
         </g>
       </svg>
+      <img id="pet-img" draggable="false" />
     </div>
     <div id="feed">🐟</div>
     <div id="pomo"><span id="pomo-time">25:00</span><span class="label" id="pomo-label">工作</span></div>
     <button id="chat-fab" title="和鲸鱼娘聊天">💬</button>
-    <div id="hint">拖动 · 双击喂食</div>
+    <div id="hint">拖动 · 双击喂食 · 右键菜单</div>
   </div>
 
   <script>
@@ -238,30 +255,49 @@
     const stage = document.getElementById('stage');
     const petEl = document.getElementById('pet');
     const whaleSvg = document.getElementById('whale-svg');
+    const petImg = document.getElementById('pet-img');
     const bubbleEl = document.getElementById('bubble');
     const pomoEl = document.getElementById('pomo');
     const pomoTime = document.getElementById('pomo-time');
     const pomoLabel = document.getElementById('pomo-label');
     const feedEl = document.getElementById('feed');
 
-    // ---------- 透明区域点击穿透 ----------
-    // 鲸鱼本体在窗口内的区域：left:20 top:30 size 160x130
+    // ---------- 自定义形象：优先加载 pet.png，失败回退 SVG ----------
+    let useImageMode = false;
+    const baseImg = new Image();
+    const moodImgs = {}; // happy/sleeping/sad -> src（存在才用）
+    baseImg.onload = () => {
+      useImageMode = true;
+      petImg.src = baseImg.src;
+      petImg.style.display = 'block';
+      whaleSvg.style.display = 'none';
+      [['happy', 'pet-happy.png'], ['sleeping', 'pet-sleep.png'], ['sad', 'pet-sad.png']].forEach(([mood, file]) => {
+        const im = new Image();
+        im.onload = () => { moodImgs[mood] = im.src; };
+        im.src = file;
+      });
+    };
+    baseImg.src = 'pet.png';
+
+    // ---------- 交互判定区（与主进程穿透逻辑一致） ----------
     const PET_BOX = { x: 20, y: 30, w: 160, h: 130 };
     let mouseInPet = false;
     function updateMouseInPet(e) {
       mouseInPet = e.offsetX >= PET_BOX.x && e.offsetX <= PET_BOX.x + PET_BOX.w
         && e.offsetY >= PET_BOX.y && e.offsetY <= PET_BOX.y + PET_BOX.h;
     }
-    stage.addEventListener('mousemove', (e) => { updateMouseInPet(e); if (!dragging) stage.style.cursor = mouseInPet ? 'grab' : 'default'; });
-    stage.addEventListener('mouseleave', () => { mouseInPet = false; });
+
     // ---------- 拖拽 ----------
     let dragging = false;
     let lastX = 0, lastY = 0;
-    let moved = false;
+    stage.addEventListener('mousemove', (e) => {
+      updateMouseInPet(e);
+      if (!dragging) stage.style.cursor = mouseInPet ? 'grab' : 'default';
+    });
+    stage.addEventListener('mouseleave', () => { mouseInPet = false; });
     stage.addEventListener('mousedown', (e) => {
       if (!mouseInPet) return;
       dragging = true;
-      moved = false;
       lastX = e.screenX;
       lastY = e.screenY;
       stage.classList.add('dragging');
@@ -270,7 +306,6 @@
       if (!dragging) return;
       const dx = e.screenX - lastX;
       const dy = e.screenY - lastY;
-      if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
       lastX = e.screenX;
       lastY = e.screenY;
       api.dragBy(dx, dy);
@@ -281,7 +316,6 @@
     });
 
     // ---------- 双击喂食 ----------
-    let lastClick = 0;
     stage.addEventListener('dblclick', () => {
       if (mouseInPet) feed();
     });
@@ -315,13 +349,12 @@
       '呜……有点想睡觉了',
       '你说，海底有没有 WiFi？',
     ];
-    let cfg = { bubblesEnabled: true, roamEnabled: true };
+    let cfg = { bubblesEnabled: true, roamEnabled: false };
     async function initConfig() {
       cfg = await api.getConfig();
     }
     initConfig();
-
-    let bubbleRandomTimer = setInterval(() => {
+    setInterval(() => {
       if (!cfg.bubblesEnabled) return;
       if (Math.random() < 0.6) say(RANDOM_LINES[Math.floor(Math.random() * RANDOM_LINES.length)]);
     }, 45000);
@@ -335,7 +368,7 @@
         this.lastInteract = Date.now();
       },
     };
-    stage.addEventListener('mousedown', () => mood.add(1));
+    stage.addEventListener('mousedown', () => mouseInPet && mood.add(1));
     setInterval(() => {
       const idleMin = (Date.now() - mood.lastInteract) / 60000;
       mood.value = Math.max(0, mood.value - 0.4);
@@ -352,6 +385,11 @@
       if (Date.now() < happyOverrideUntil && state !== 'happy') return;
       if (state === lookState) return;
       lookState = state;
+      if (useImageMode) {
+        const src = state !== 'normal' && moodImgs[state] ? moodImgs[state] : baseImg.src;
+        if (petImg.src !== src) petImg.src = src;
+        return;
+      }
       whaleSvg.classList.remove('happy', 'sad', 'sleeping');
       if (state !== 'normal') whaleSvg.classList.add(state);
     }
@@ -385,6 +423,7 @@
 
     // ---------- 右键小菜单 ----------
     const ctxMenu = document.getElementById('ctxmenu');
+    let ctxHideTimer = null;
     function hideCtxMenu() { ctxMenu.style.display = 'none'; }
     stage.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -393,8 +432,13 @@
       ctxMenu.style.left = Math.min(e.offsetX, 60) + 'px';
       ctxMenu.style.top = Math.min(e.offsetY, 110) + 'px';
       ctxMenu.style.display = 'block';
+      clearTimeout(ctxHideTimer);
+      ctxHideTimer = setTimeout(hideCtxMenu, 6000);
     });
-    stage.addEventListener('click', (e) => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
+    stage.addEventListener('mousedown', (e) => {
+      if (ctxMenu.contains(e.target)) return;
+      hideCtxMenu();
+    });
     document.getElementById('cm-chat').addEventListener('click', (e) => {
       e.stopPropagation();
       hideCtxMenu();
@@ -417,9 +461,6 @@
       api.openChat();
     });
 
-    // 右键 = 打开聊天（已改为小菜单，见上方 ctxmenu）
-
-    // 禁止拖拽图片/选择
     document.addEventListener('dragstart', (e) => e.preventDefault());
   </script>
 </body>

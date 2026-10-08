@@ -66,6 +66,8 @@ let tray = null;
 let isQuitting = false;
 
 const PET_SIZE = { width: 200, height: 200 };
+// 鲸鱼本体在窗口内的区域（与渲染层 PET_BOX 一致）
+const PET_BOX = { x: 20, y: 30, w: 160, h: 130 };
 
 function createPetWindow() {
   petWin = new BrowserWindow({
@@ -84,13 +86,32 @@ function createPetWindow() {
   });
   petWin.setAlwaysOnTop(true, 'screen-saver');
   petWin.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  let savePosTimer = null;
   petWin.on('moved', () => {
     if (!petWin) return;
     const [x, y] = petWin.getPosition();
     config.lastX = x;
     config.lastY = y;
-    saveConfig();
+    // 防抖：游动动画高频触发 moved，不能每次都写磁盘
+    clearTimeout(savePosTimer);
+    savePosTimer = setTimeout(saveConfig, 500);
   });
+  // 透明区域点击穿透：鼠标不在鲸鱼本体区域时，点击事件直接传给桌面
+  const area = { ...PET_BOX };
+  petWin.webContents.on('before-input-event', () => {});
+  setInterval(() => {
+    if (!petWin || petWin.isDestroyed()) return;
+    if (petWin.isFocused()) {
+      petWin.setIgnoreMouseEvents(false);
+      return;
+    }
+    const cursor = screen.getCursorScreenPoint();
+    const [px, py] = petWin.getPosition();
+    const inX = cursor.x >= px + area.x && cursor.x <= px + area.x + area.w;
+    const inY = cursor.y >= py + area.y && cursor.y <= py + area.y + area.h;
+    const inPet = inX && inY;
+    petWin.setIgnoreMouseEvents(!inPet, { forward: true });
+  }, 120).unref();
   if (IS_DEV) petWin.webContents.openDevTools({ mode: 'detach' });
 }
 
@@ -241,6 +262,7 @@ function randomRoamPoint() {
 
 function roamStep() {
   if (!petWin || !config.roamEnabled || petWin.isDestroyed()) return;
+  if (pomodoro.mode === 'work') return; // 工作中不打扰，避免拖拽冲突
   const cur = petPosition();
   if (!cur) return;
   const target = randomRoamPoint();
@@ -273,21 +295,27 @@ function startRoaming() {
 let fullscreenTimer = null;
 let hiddenByFullscreen = false;
 
+let lastWorkAreaSig = '';
 function checkFullscreen() {
   if (!config.hideOnFullscreen || !petWin || petWin.isDestroyed()) return;
-  // 近似判定：全屏应用会占据整个 display bounds，使 workArea 与 bounds 基本重合且高度变大
+  // 只在 workArea 签名变化时判定，避免任务栏自动隐藏的用户被误判
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+  const sig = `${display.id}:${display.workArea.x},${display.workArea.y},${display.workArea.width},${display.workArea.height}`;
+  const changed = sig !== lastWorkAreaSig;
+  lastWorkAreaSig = sig;
+  if (!changed) return;
   const isFs =
     display.workArea.y === display.bounds.y &&
+    display.workArea.x === display.bounds.x &&
     display.workArea.width === display.bounds.width &&
-    display.workArea.height === display.bounds.height;
-  const taskbarLike = display.workArea.height < display.bounds.height - 60;
-  const fullscreenLike = isFs && !taskbarLike;
-  if (fullscreenLike && !hiddenByFullscreen) {
+    display.workArea.height === display.bounds.height &&
+    display.bounds.height - display.workArea.height === 0;
+  // 连续两次确认才触发，防止瞬间抖动
+  if (isFs && !hiddenByFullscreen) {
     hiddenByFullscreen = true;
     petWin.hide();
     if (chatWin && chatWin.isVisible()) chatWin.hide();
-  } else if (!fullscreenLike && hiddenByFullscreen) {
+  } else if (!isFs && hiddenByFullscreen) {
     hiddenByFullscreen = false;
     petWin.show();
   }
@@ -405,8 +433,8 @@ function rebuildTrayMenu() {
     { type: 'separator' },
     { label: '💬 和鲸鱼娘聊天', click: () => showChatNearPet() },
     {
-      label: '⚙️ 设置（API 密钥等）',
-      click: () => shell.openExternal('file://' + configPath()),
+      label: '⚙️ 打开配置文件',
+      click: () => shell.showItemInFolder(configPath()),
     },
     { type: 'separator' },
     {
