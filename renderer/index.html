@@ -147,6 +147,25 @@
       text-shadow: 0 1px 2px rgba(0,0,0,0.4);
       pointer-events: none;
     }
+    #ctxmenu {
+      position: absolute;
+      display: none;
+      background: rgba(30, 38, 70, 0.96);
+      border: 1px solid rgba(120, 140, 255, 0.5);
+      border-radius: 8px;
+      padding: 4px 0;
+      min-width: 120px;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    #ctxmenu .item {
+      padding: 6px 14px;
+      font-size: 13px;
+      color: #dde5ff;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #ctxmenu .item:hover { background: rgba(77, 107, 254, 0.4); }
     #chat-fab {
       position: absolute;
       bottom: 6px;
@@ -172,6 +191,11 @@
 <body>
   <div id="stage">
     <div id="bubble"></div>
+    <div id="ctxmenu">
+      <div class="item" id="cm-chat">💬 和我聊天</div>
+      <div class="item" id="cm-roam">🌊 暂停游动</div>
+      <div class="item" id="cm-quit">🚪 退出桌宠</div>
+    </div>
     <div id="pet">
       <svg id="whale-svg" viewBox="0 0 160 130" width="160" height="130">
         <g id="float-anim">
@@ -220,11 +244,22 @@
     const pomoLabel = document.getElementById('pomo-label');
     const feedEl = document.getElementById('feed');
 
+    // ---------- 透明区域点击穿透 ----------
+    // 鲸鱼本体在窗口内的区域：left:20 top:30 size 160x130
+    const PET_BOX = { x: 20, y: 30, w: 160, h: 130 };
+    let mouseInPet = false;
+    function updateMouseInPet(e) {
+      mouseInPet = e.offsetX >= PET_BOX.x && e.offsetX <= PET_BOX.x + PET_BOX.w
+        && e.offsetY >= PET_BOX.y && e.offsetY <= PET_BOX.y + PET_BOX.h;
+    }
+    stage.addEventListener('mousemove', (e) => { updateMouseInPet(e); if (!dragging) stage.style.cursor = mouseInPet ? 'grab' : 'default'; });
+    stage.addEventListener('mouseleave', () => { mouseInPet = false; });
     // ---------- 拖拽 ----------
     let dragging = false;
     let lastX = 0, lastY = 0;
     let moved = false;
     stage.addEventListener('mousedown', (e) => {
+      if (!mouseInPet) return;
       dragging = true;
       moved = false;
       lastX = e.screenX;
@@ -248,7 +283,7 @@
     // ---------- 双击喂食 ----------
     let lastClick = 0;
     stage.addEventListener('dblclick', () => {
-      feed();
+      if (mouseInPet) feed();
     });
     function feed() {
       mood.add(12);
@@ -348,17 +383,41 @@
     api.onBubblesChanged(({ enabled }) => { cfg.bubblesEnabled = enabled; });
     api.onSay((data) => say(data.text, data.kind, 6000));
 
+    // ---------- 右键小菜单 ----------
+    const ctxMenu = document.getElementById('ctxmenu');
+    function hideCtxMenu() { ctxMenu.style.display = 'none'; }
+    stage.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (!mouseInPet) return;
+      document.getElementById('cm-roam').textContent = cfg.roamEnabled ? '🌊 暂停游动' : '🌊 开始游动';
+      ctxMenu.style.left = Math.min(e.offsetX, 60) + 'px';
+      ctxMenu.style.top = Math.min(e.offsetY, 110) + 'px';
+      ctxMenu.style.display = 'block';
+    });
+    stage.addEventListener('click', (e) => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
+    document.getElementById('cm-chat').addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideCtxMenu();
+      api.openChat();
+    });
+    document.getElementById('cm-roam').addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideCtxMenu();
+      api.toggleRoam();
+    });
+    document.getElementById('cm-quit').addEventListener('click', (e) => {
+      e.stopPropagation();
+      hideCtxMenu();
+      api.quitApp();
+    });
+
     // ---------- 聊天按钮 ----------
     document.getElementById('chat-fab').addEventListener('click', (e) => {
       e.stopPropagation();
       api.openChat();
     });
 
-    // 右键 = 打开聊天
-    stage.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      api.openChat();
-    });
+    // 右键 = 打开聊天（已改为小菜单，见上方 ctxmenu）
 
     // 禁止拖拽图片/选择
     document.addEventListener('dragstart', (e) => e.preventDefault());

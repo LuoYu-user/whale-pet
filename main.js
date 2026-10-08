@@ -15,7 +15,7 @@ const defaultConfig = {
   petName: '鲸鱼娘',
   pomodoroWork: 25,
   pomodoroRest: 5,
-  roamEnabled: true,
+  roamEnabled: false,
   roamIntervalSec: 45,
   hideOnFullscreen: true,
   bubblesEnabled: true,
@@ -457,6 +457,16 @@ function setupIpc() {
   });
   ipcMain.on('chat:close', () => chatWin && chatWin.hide());
   ipcMain.on('config:open-file', () => shell.showItemInFolder(configPath()));
+  ipcMain.on('pet:toggle-roam', () => {
+    config.roamEnabled = !config.roamEnabled;
+    saveConfig();
+    rebuildTrayMenu();
+    if (petWin) petWin.webContents.send('pet:roam-changed', { enabled: config.roamEnabled });
+  });
+  ipcMain.on('app:quit', () => {
+    isQuitting = true;
+    app.quit();
+  });
 }
 
 // ---------- 启动 ----------

@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('petApi', {
   togglePomodoroRest: () => ipcRenderer.send('pomodoro:toggle-rest'),
   closeChat: () => ipcRenderer.send('chat:close'),
   openConfigFile: () => ipcRenderer.send('config:open-file'),
+  toggleRoam: () => ipcRenderer.send('pet:toggle-roam'),
+  quitApp: () => ipcRenderer.send('app:quit'),
   onSay: (cb) => {
     ipcRenderer.on('pet:say', (_e, data) => cb(data));
   },
