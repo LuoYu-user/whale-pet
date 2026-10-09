@@ -166,26 +166,6 @@
       100% { opacity: 0; transform: translateY(20px) scale(0.3); }
     }
 
-    #chat-fab {
-      position: absolute;
-      bottom: 40px;
-      left: 100px;
-      transform: translateX(-50%);
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: #4D6BFE;
-      color: white;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(77, 107, 254, 0.5);
-      z-index: 4;
-    }
-    #chat-fab:hover { transform: translateX(-50%) scale(1.12); }
 
     #ctxmenu {
       position: absolute;
@@ -252,7 +232,6 @@
     </div>
     <div id="feed">🐟</div>
     <div id="pomo"><span id="pomo-time">25:00</span><span class="label" id="pomo-label">工作</span></div>
-    <button id="chat-fab" title="和鲸鱼娘聊天">💬</button>
 
   </div>
 
@@ -461,15 +440,6 @@
       e.stopPropagation();
       hideCtxMenu();
       api.quitApp();
-    });
-
-    // ---------- 聊天按钮 ----------
-    // 注意：透明窗口启用了 setIgnoreMouseEvents(forward) 后，鼠标离开不会触发 :hover 失效，
-    // 按钮一经显示会常驻——改由主进程鼠标轮询驱动显示/隐藏
-    api.onMouseInPet(({ inPet }) => {
-      const fab = document.getElementById('chat-fab');
-      if (inPet) fab.style.display = 'flex';
-      else fab.style.display = 'none';
     });
 
     document.addEventListener('dragstart', (e) => e.preventDefault());

@@ -99,7 +99,6 @@ function createPetWindow() {
   });
   // 透明区域点击穿透：鼠标不在鲸鱼本体区域时，点击事件直接传给桌面
   const area = { ...PET_BOX };
-  let lastInPet = null;
   setInterval(() => {
     if (!petWin || petWin.isDestroyed()) return;
     const cursor = screen.getCursorScreenPoint();
@@ -108,10 +107,6 @@ function createPetWindow() {
     const inY = cursor.y >= py + area.y && cursor.y <= py + area.y + area.h;
     const inPet = inX && inY;
     petWin.setIgnoreMouseEvents(!inPet, { forward: true });
-    if (inPet !== lastInPet) {
-      lastInPet = inPet;
-      petWin.webContents.send('pet:mouse-in-pet', { inPet });
-    }
   }, 120).unref();
   if (IS_DEV) petWin.webContents.openDevTools({ mode: 'detach' });
 }
